@@ -1,14 +1,14 @@
 //
-//  パッシブスキル ver1.02
+//  パッシブスキル ver1.04
 //
 // author yana
 //
 
 var Imported = Imported || {};
-Imported['yPassiveSkill'] = 1.02;
+Imported['yPassiveSkill'] = 1.04;
 
 /*:
- * @plugindesc ver1.02/スキルに特徴を設定できるようにします。
+ * @plugindesc ver1.04/スキルに特徴を設定できるようにします。
  * @author Yana
  * 
  * @param Passive Skill Type ID
@@ -125,6 +125,12 @@ Imported['yPassiveSkill'] = 1.02;
  * 利用規約：特になし。素材利用は自己責任でお願いします。
  * ------------------------------------------------------
  * 更新履歴:
+ * ver1.04:
+ * 最大MPのキーワードが間違っていたバグを修正。
+ * システムで設定した用語でのパッシブスキル化が正常に機能していなかったバグを修正。
+ * ver1.03:
+ * 特徴を持っていないスキルもパッシブスキルとして判定されていたバグを修正。
+ * sparamの数値が100%基準になっていなかったバグを修正。
  * ver1.02:
  * PassiveSkillManagerをfunctionの外に移動
  * ver1.01:
@@ -205,55 +211,57 @@ function PassiveSkillManager() {
 		case '最大ＨＰ':
 		case TextManager.basic(2):
 		case TextManager.basic(3):
+		case TextManager.param(0):
 			id = 0;
 			code = parc == '' ? 121 : 21;
 			break;
-		case 'MP':
-		case 'ＭＰ':
+		case '最大MP':
+		case '最大ＭＰ':
 		case TextManager.basic(4):
 		case TextManager.basic(5):
+		case TextManager.param(1):
 			id = 1;
 			code = parc == '' ? 121 : 21;
 			break;
 		case 'ATK':
 		case 'ＡＴＫ':
 		case '攻撃力':
-		case TextManager.param[2]:
+		case TextManager.param(2):
 			id = 2;
 			code = parc == '' ? 121 : 21;
 			break;
 		case 'DEF':
 		case 'ＤＥＦ':
 		case '防御力':
-		case TextManager.param[3]:
+		case TextManager.param(3):
 			id = 3;
 			code = parc == '' ? 121 : 21;
 			break;
 		case 'MAT':
 		case 'ＭＡＴ':
 		case '魔法力':
-		case TextManager.param[4]:
+		case TextManager.param(4):
 			id = 4;
 			code = parc == '' ? 121 : 21;
 			break;
 		case 'MDF':
 		case 'ＭＤＦ':
 		case '魔法防御':
-		case TextManager.param[5]:
+		case TextManager.param(5):
 			id = 5;
 			code = parc == '' ? 121 : 21;
 			break;
 		case 'AGI':
 		case 'ＡＧＩ':
 		case '敏捷性':
-		case TextManager.param[6]:
+		case TextManager.param(6):
 			id = 6;
 			code = parc == '' ? 121 : 21;
 			break;
 		case 'LUK':
 		case 'ＬＵＫ':
 		case '運':
-		case TextManager.param[7]:
+		case TextManager.param(7):
 			id = 7;
 			code = parc == '' ? 121 : 21;
 			break;
@@ -261,7 +269,7 @@ function PassiveSkillManager() {
 		case 'HIT':
 		case 'ＨＩＴ':
 		case '命中率':
-		case TextManager.param[8]:
+		case TextManager.param(8):
 			id = 0;
 			code = 22;
 			break;
@@ -271,7 +279,7 @@ function PassiveSkillManager() {
 			id = 1;
 			code = 22;
 			break;
-		case TextManager.param[9]:
+		case TextManager.param(9):
 		case 'CRI':
 		case 'ＣＲＩ':
 		case '会心率':
@@ -457,6 +465,7 @@ function PassiveSkillManager() {
 		if (code === null){ return false }
 		if ((code > 20 && code < 30) || (code === 123)){ value = (value / 100)}
 		if (code === 21){ value += 1 }
+		if (code === 23){ value += 1 }
 		return {'code':code,'dataId':id,'value':value};
 	};
 	
@@ -547,7 +556,7 @@ function PassiveSkillManager() {
     	this.traitNest = true;
    		this.enableSkills().forEach(function(skill){
     		PassiveSkillManager.initPassiveSkill(skill);
-    		if (skill.traits != []){ objects.push(skill) }
+    		if (skill.traits.length > 0){ objects.push(skill) }
     	},this);
     	this.traitNest = false;
     	return objects;
@@ -648,7 +657,7 @@ function PassiveSkillManager() {
 		var _pS_GBBase_sparam = Game_BattlerBase.prototype.sparam;
 		Game_BattlerBase.prototype.sparam = function(paramId){
 			var pr = _pS_GBBase_sparam.call(this,paramId);
-			pr += this.traitsSum(123, paramId);
+			pr += this.traitsSum(123, paramId) + 1.0;
 			return pr;
 		}
 		
