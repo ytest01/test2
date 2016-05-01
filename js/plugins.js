@@ -41,5 +41,6 @@ var $plugins =
 {"name":"PassiveSkill","status":true,"description":"ver1.04/スキルに特徴を設定できるようにします。","parameters":{"Passive Skill Type ID":"10","Add Multi Order":"true","Hide Passive Disable":"false"}},
 {"name":"SkillCPSystem","status":true,"description":"ver1.07/スキルを装備して使用するシステムを追加します。","parameters":{"Default Skill CP":"0","Default Skill Set":"3","Default CP":"100","CP Name":"CP","Set Name":"セット数","LvUp CP Rate":"0.3","LvUp Set Rate":"0.05","No Equip Slot Name":"---------------------------","Set Point Gauge Color1":"22","Set Point Gauge Color2":"23","CP Gauge Color1":"28","CP Gauge Color2":"29","Add Menu Skill Setting":"true","Menu Skill Setting Title":"潜在技装","Show Unsettable Skill":"false","Unsetting Skill Color":"4","No Cost Class Learn Skills":"false"}},
 {"name":"SyncVariable","status":true,"description":"ユーザ間の変数同期プラグイン","parameters":{"ユーザID":"y_create","同期開始変数番号":"600","同期終了変数番号":"602","同期開始スイッチ番号":"1","同期終了スイッチ番号":"2"}},
-{"name":"111_InputForm","status":true,"description":"フォーム作って文字入力","parameters":{}}
+{"name":"111_InputForm","status":true,"description":"フォーム作って文字入力","parameters":{}},
+{"name":"liply_memoryleak_patch","status":true,"description":"メモリリークパッチ","parameters":{}}
 ];
