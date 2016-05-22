@@ -1,5 +1,5 @@
 //=============================================================================
-// 【フェイスチャット補助】　Version: 1.14
+// 【フェイスチャット補助】　Version: 1.21
 //
 // ここからリスポーン: http://respawnfromhere.blog.fc2.com/
 // Twitter: https://twitter.com/ibakip
@@ -50,7 +50,7 @@
  * @help
  *
  * //=============================================================================
- * // 【フェイスチャット補助】　Version: 1.14
+ * // 【フェイスチャット補助】　Version: 1.21
  * //
  * // ここからリスポーン: http://respawnfromhere.blog.fc2.com/
  * // Twitter: https://twitter.com/ibakip
@@ -92,23 +92,31 @@
  *   ・他プラグインとの競合対策を追加
  *  ○ Ver 1.12 (2015/12/31)
  *   ・動作の軽量化
- *  ○ Ver 1.13 (2015/1/2)
+ *  ○ Ver 1.13 (2016/1/2)
  *   ・いくつかの問題点を修正
- *  ○ Ver 1.14 (2015/1/3)
+ *  ○ Ver 1.14 (2016/1/3)
  *   ・FaceChat Ready実行時に色調変化を行うかを指定できる
  *     プラグインパラメータを追加
  *   ・コンテニュー時にチャット起動が正しく行えなくなるバグを修正
+ *  ○ Ver 1.15 (2016/1/23)
+ *   ・いくつかの問題点を修正
+ *  ○ Ver 1.20 (2016/2/24)
+ *   ・クリック（タッチ）による起動を実装
+ *   ・若干の動作軽量化
+ *  ○ Ver 1.21 (2016/3/22)
+ *   ・プラグインOFF時にセーブしたデータをプラグインON時に
+ *     ロードするとエラーが発生する問題を修正
  *
  */
  //=============================================================================
 
-
 var Imported = Imported || {};
 Imported.SupportFaceChat = {};
 
-
 (function(){
 
+
+//変数の定義
 var SFC_Val = Imported.SupportFaceChat;
 SFC_Val.WinON = true;
 var FaceChatArray = new Array();
@@ -122,6 +130,7 @@ var draw_State = false;
 var Face = [ [10,0], [11,0], [12,0], [13,0], [14,0], [15,0], [16,0], [17,0] ];
 var BalloonAndState = [ [18,0], [19,0], [20,0], [21,0], [22,0], [23,0], [24,0], [25,0] ];
 var SFC_cache = {};
+var doFaceChatReady = false;
 Input.keyMapper[67] = 'FaceChat';
 Input.gamepadMapper[8] = 'FaceChat';
 
@@ -163,7 +172,9 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
                     currentDisplayID = 0;
                 }
             }
-            currentFaceChatID = FaceChatArray[currentDisplayID][0];
+            if(FaceChatArray.length > 0){
+                currentFaceChatID = FaceChatArray[currentDisplayID][0];
+            }
         }
     }
     if (command === 'FaceChatWindow'){
@@ -192,6 +203,7 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
                         this.wait( frame );
                     }
                 }
+                doFaceChatReady = true;
                 showTitle = true;
                 break;
             case 'Finish':
@@ -203,7 +215,7 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
                 for(var loop=25;loop>=10;loop--){
                     $gameScreen.erasePicture(loop);
                 }
-                if(ChangeTone){
+                if(ChangeTone && doFaceChatReady){
                     var frame = 30;
                     var wait = true;
                     $gameScreen.startTint( currentTone , frame );
@@ -211,6 +223,7 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
                         this.wait( frame );
                     }
                 }
+                doFaceChatReady = false;
                 break;
             case 'addFace':
                 draw_Face = true;
@@ -218,7 +231,6 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
                 Face[Number(args[4])-1][1] = args[2];
                 var facePos = calcXYPosition(args[3],args[4]);
                 $gameScreen.showPicture(Number(args[4])+9, args[1], 1, facePos[0], facePos[1], 100, 100, 255, 0);
-                $gameScreen.tintPicture( Number(args[4])+9, tone, 0);
                 $gameMap._interpreter.wait(1);
                 window.setTimeout( function() { draw_Face = false; }, (1000/60) * 2 );
                 break;
@@ -229,9 +241,7 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
                     draw_Face = true;
                     Face[Number(args[3])-1][1] = args[2];
                     $gameScreen.showPicture( Number(args[3])+9, args[1], 1, pic.x(), pic.y(), pic.scaleX(), pic.scaleY(), pic.opacity(), pic.blendMode() );
-                    $gameScreen.tintPicture( Number(args[3])+9, pic.tone(), 0);
-                    $gameMap._interpreter.wait(1);
-                    window.setTimeout( function() { draw_Face = false; }, (1000/60) * 2 );
+                    window.setTimeout( function() { draw_Face = false; }, (1000/60) * 5 );
                 }
                 pic=null;
                 break;
@@ -510,22 +520,42 @@ var calcXYPosition = function(total, number){
 //-----------------------------------------------------------------------------
 // DataManager
 //-----------------------------------------------------------------------------
+/* フェイスチャットの情報をセーブ＆ロードできるように上書き */
 
-var _DataManager_makeSaveContents = DataManager.makeSaveContents;
+var SFC_DataManager_makeSaveContents = DataManager.makeSaveContents;
 DataManager.makeSaveContents = function() {
-    var contents = _DataManager_makeSaveContents();
+    var contents = SFC_DataManager_makeSaveContents();
     contents.FaceChatArray = FaceChatArray;
     contents.currentDisplayID = currentDisplayID;
     contents.currentFaceChatID = currentFaceChatID;
+    contents.WinON = SFC_Val.WinON;
     return contents;
 };
-
-var _DataManager_extractSaveContents = DataManager.extractSaveContents;
+var SFC_DataManager_extractSaveContents = DataManager.extractSaveContents;
 DataManager.extractSaveContents = function(contents) {
-    _DataManager_extractSaveContents(contents);
-    FaceChatArray = contents.FaceChatArray;
-    currentDisplayID = contents.currentDisplayID;
-    currentFaceChatID = contents.currentFaceChatID;
+    SFC_DataManager_extractSaveContents(contents);
+    if (!(typeof contents.currentDisplayID === "undefined")) {
+        currentDisplayID = contents.currentDisplayID;
+    }
+    if (!(typeof contents.currentFaceChatID === "undefined")) {
+        currentFaceChatID = contents.currentFaceChatID;
+    }
+    if (!(typeof contents.FaceChatArray === "undefined")) {
+        FaceChatArray = contents.FaceChatArray;
+    }
+    if (!(typeof contents.WinON === "undefined")) {
+        SFC_Val.WinON = contents.WinON;
+    }
+};
+
+//-----------------------------------------------------------------------------
+// Scene_Title
+//-----------------------------------------------------------------------------
+//ニューゲーム時にフェイスチャットのリストをリセット
+var SFC_scene_title_commandNewGame = Scene_Title.prototype.commandNewGame;
+Scene_Title.prototype.commandNewGame = function() {
+    FaceChatArray = new Array();
+    SFC_scene_title_commandNewGame.call(this);
 };
 
 
@@ -545,6 +575,7 @@ Window_ChatTitle.prototype.initialize = function(x, y, width, height) {
     Window_Base.prototype.initialize.call(this, x, y, width, height);
 };
 
+//描画内容の更新
 Window_ChatTitle.prototype.refresh = function(){
     if(this.visible){
         var y = (this.contentsHeight() - Window_Base.prototype.lineHeight() ) / 2;
@@ -584,6 +615,7 @@ Window_ChatInfo.prototype.initialize = function(x, y, width, height) {
     this.currentTitle = '';
 };
 
+//描画内容の更新
 Window_ChatInfo.prototype.refresh = function(){
     this.contents.clear();
     if( FaceChatArray.length !== 0 && FaceChatArray[currentDisplayID] !== null){
@@ -645,26 +677,15 @@ Window_ChatInfo.prototype.show = function() {
     this.visible = true;
 };
 
+//チャット切り替えのキーが押されたかチェック
 Window_ChatInfo.prototype.isNextChatCalled = function() {
     return Input.isTriggered('pagedown');
 };
-
 Window_ChatInfo.prototype.isPreviousChatCalled = function() {
     return Input.isTriggered('pageup');
 };
 
 window.Window_ChatInfo = Window_ChatInfo;
-
-
-//-----------------------------------------------------------------------------
-// Scene_Title
-//-----------------------------------------------------------------------------
-//ニューゲーム時にフェイスチャットのリストをリセット
-var SFC_scene_title_commandNewGame = Scene_Title.prototype.commandNewGame;
-Scene_Title.prototype.commandNewGame = function() {
-    FaceChatArray = new Array();
-    SFC_scene_title_commandNewGame.call(this);
-};
 
 
 //-----------------------------------------------------------------------------
@@ -715,6 +736,8 @@ Scene_Map.prototype.createAllWindows = function() {
 var SFC_scene_map_update = Scene_Map.prototype.update;
 Scene_Map.prototype.update = function() {
     SFC_scene_map_update.call(this);
+
+    //チャットタイトルウィンドウの開閉処理
     if( showTitle && !this.titleWindowOpened ){
         this.ChatTitleWindow.open();
         this.ChatTitleWindow.visible = true;
@@ -727,23 +750,24 @@ Scene_Map.prototype.update = function() {
         this.titleWindowOpened = false;
     }
 
-    if( FaceChatArray.length === 0 ){
-        this.ChatInfoWindow.hide();
-        return;
-    }
-    if( !$gamePlayer.canMove() || !SFC_Val.WinON ){
+    //チャット使用不可の時、チャットお知らせウィンドウを非表示にする。
+    if( FaceChatArray.length === 0 || !$gamePlayer.canMove() || !SFC_Val.WinON ){
         this.ChatInfoWindow.hide();
         return;
     }
 
+    //常駐ウィンドウプラグインとの競合対策
     if( this.RW_flag === true ){
         Imported.ResidentWindow.WinON = true;
         this.RW_flag = false;
     }
 
+    //チャットお知らせウィンドウの表示
     if( !this.changeScene ) this.ChatInfoWindow.show();
+
+    //フェイスチャット呼び出し処理
     if( this.isFaceChatCalled() ){
-        if( Imported.ResidentWindow ){
+        if( Imported.ResidentWindow ){  //常駐ウィンドウプラグインとの競合対策
             if( Imported.ResidentWindow.WinON ){
                 Imported.ResidentWindow.WinON = false;
                 this.RW_flag = true;
@@ -770,11 +794,48 @@ Scene_Map.prototype.stop = function() {
 };
 
 Scene_Map.prototype.isFaceChatCalled = function() {
-    return Input.isTriggered('FaceChat');
+    return Input.isTriggered('FaceChat') || this.isTouchCIW() ;
 };
 
 Scene_Map.prototype.isTitleWindowOpened = function() {
     return this.titleWindowOpened;
+};
+
+Scene_Map.prototype.isTouchCIW = function() {
+    if( TouchInput.isPressed() && this.ChatInfoWindow.visible ){
+        var eval1 = (TouchInput.x > this.ChatInfoWindow.x);
+        var eval2 = (TouchInput.x < this.ChatInfoWindow.x + this.ChatInfoWindow.width);
+        var eval3 = (TouchInput.y > this.ChatInfoWindow.y);
+        var eval4 = (TouchInput.y < this.ChatInfoWindow.y + this.ChatInfoWindow.height);
+        if(eval1 && eval2 && eval3 && eval4){
+            SFC_StopMove = true;
+        }
+        return eval1 && eval2 && eval3 && eval4;
+    }
+    else{
+        return false;
+    }
+};
+
+var SFC_scene_map_isFastForward = Scene_Map.prototype.isFastForward;
+Scene_Map.prototype.isFastForward = function() {
+    if(this.isTouchCIW()){
+        return false;
+    }
+    else{
+        SFC_scene_map_isFastForward.call(this);
+    }
+};
+
+Scene_Map.prototype.updateDestination = function() {
+    if (this.isMapTouchOk()) {
+        if(!this.isTouchCIW()){
+            this.processMapTouch();
+        }
+    } else {
+        $gameTemp.clearDestination();
+        this._touchCount = 0;
+    }
 };
 
 
@@ -791,6 +852,7 @@ Sprite_Picture.prototype.initialize = function(pictureId) {
     this._number = 0;
     this._now = 0;
     this._lastDate = 0;
+    this._lastFaceNumber = 0;
     SFC_sprite_picture_initialize.call(this, pictureId);
 };
 
@@ -799,13 +861,14 @@ Sprite_Picture.prototype.loadBitmap = function() {
     if( draw_Face ){
         this._face = true;
         var faceNumber = Face[this._pictureId-10][1];
-        var b = ImageManager.loadFace(this._pictureName);
-        var bt = new Bitmap(144,144);
         var x = ((faceNumber-1) % 4) * 144;
         var y = Math.floor((faceNumber-1) / 4) * 144;
+        b = ImageManager.loadFace(this._pictureName);
+        var bt = new Bitmap(144,144);
         bt.gradientFillRect(0, 0, 144, 144, '#DCDCDC', '#696969', true);
         b.addLoadListener(function () {
-               bt.blt(b,x,y,144,144,0,0);
+            bt.blt(b,x,y,144,144,0,0);
+            this.bitmap = bt;
         });
         this.bitmap = bt;
         draw_Face = false;
@@ -855,20 +918,20 @@ Sprite_Picture.prototype.loadBitmap = function() {
 
 Sprite_Picture.prototype.SFC_updateFace = function() {
     var picture = this.picture();
-    var lastFaceNumber;
     var b;
     if (picture) {
         var pictureName = picture.name();
-        if (this._pictureName !== pictureName || lastFaceNumber!==Face[this._pictureId-10][1]) {
+        var x = ((Face[this._pictureId-10][1]-1) % 4) * 144;
+        var y = Math.floor((Face[this._pictureId-10][1]-1) / 4) * 144;
+        if (this._pictureName !== pictureName || this._lastFaceNumber!==Face[this._pictureId-10][1]) {
             this._pictureName = pictureName;
-            lastFaceNumber = Face[this._pictureId-10][1];
+            this._lastFaceNumber = Face[this._pictureId-10][1];
             b = ImageManager.loadFace(this._pictureName);
             var bt = new Bitmap(144,144);
-            var x = ((Face[this._pictureId-10][1]-1) % 4) * 144;
-            var y = Math.floor((Face[this._pictureId-10][1]-1) / 4) * 144;
             bt.gradientFillRect(0, 0, 144, 144, '#DCDCDC', '#696969', true);
             b.addLoadListener(function () {
                    bt.blt(b,x,y,144,144,0,0);
+                   this.bitmap = bt;
             });
             this.bitmap = bt;
         }
